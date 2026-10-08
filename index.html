@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala VIP - Kevin y Sofi</title>
+    <!-- Librerías de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        body { 
+            margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0f2027; color: white; overflow: hidden; 
+            display: flex; flex-direction: column; height: 100vh;
+        }
+        
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            z-index: 1000; display: flex; justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: rgba(26, 26, 26, 0.9); padding: 40px; border-radius: 15px; 
+            text-align: center; border: 2px solid #27ae60; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 300px;
+        }
+        .login-box input {
+            display: block; width: 90%; margin: 15px auto; padding: 12px;
+            border-radius: 5px; border: none; background: #333; color: white; outline: none;
+        }
+        .login-box input:focus { border: 2px solid #27ae60; }
+        
+        header {
+            background: rgba(255, 255, 255, 0.05); padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 100;
+        }
+        .brand { font-size: 24px; font-weight: bold; }
+        .btn-link {
+            background: linear-gradient(45deg, #3498db, #2980b9); color: white; 
+            border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold;
+        }
+
+        #main-container { display: flex; flex-grow: 1; overflow: hidden; position: relative; }
+        #workspace { position: relative; flex-grow: 1; width: 100%; height: 100%; }
+
+        #right-sidebar {
+            width: 350px; background: #1a1a1a; border-left: 1px solid #333;
+            display: none; flex-direction: column; z-index: 90;
+        }
+        
+        .sidebar-tabs { display: flex; background: #2c3e50; }
+        .sidebar-tabs button {
+            flex: 1; padding: 15px; background: none; border: none; color: white; 
+            font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent;
+        }
+        .sidebar-tabs button.active { border-bottom: 3px solid #2ecc71; background: #34495e; }
+        
+        .tab-content { display: none; flex-direction: column; flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .tab-content.active { display: flex; }
+
+        /* Chat */
+        #chat-messages { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 10px; }
+        .chat-msg { background: #34495e; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; word-wrap: break-word; }
+        .chat-input-container { display: flex; gap: 10px; }
+        .chat-input-container input { flex-grow: 1; padding: 10px; border-radius: 5px; border: none; outline: none; }
+        .chat-input-container button { padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* Encuestas */
+        .poll-box { background: #2c3e50; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .poll-box input { width: 90%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; box-sizing: border-box; }
+        .poll-result { background: #34495e; padding: 15px; border-radius: 8px; margin-top: 10px; position: relative; }
+        .delete-poll-btn { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-weight: bold; cursor: pointer; }
+        .vote-record { font-size: 13px; color: #2ecc71; margin-top: 8px; padding-left: 5px; border-left: 2px solid #2ecc71; }
+        .poll-timer-display { color: #f1c40f; font-weight: bold; margin-bottom: 10px; display: block; font-size: 14px; }
+        
+        /* Videos */
+        .draggable-video {
+            position: absolute; background: #1a1a1a; border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6); overflow: hidden; border: 2px solid #333;
+            transition: width 0.3s ease;
+        }
+        .drag-header {
+            padding: 10px; cursor: grab; background: #2c3e50; color: white;
+            font-weight: bold; text-align: center; user-select: none;
+        }
+        video { display: block; width: 300px; height: auto; background: black; }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.9); padding: 15px; display: flex; justify-content: center; gap: 15px; z-index: 100;
+        }
+        .controls button {
+            background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        .controls button:hover:not(:disabled) { filter: brightness(1.1); }
+        .controls button.danger { background: #e74c3c; }
+        .controls button.primary { background: #8e44ad; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2>Acceso a Sala VIP</h2>
+            <input type="text" id="username-input" placeholder="Tu Nombre">
+            <input type="password" id="password-input" placeholder="Contrasena">
+            <button onclick="verificarAcceso()" style="width: 100%; margin-top: 10px; padding: 12px;">Entrar a la Sala</button>
+            <p id="login-error" style="color: #e74c3c; display: none; font-weight: bold; margin-top: 15px;">Contrasena incorrecta.</p>
+        </div>
+    </div>
+
+    <header>
+        <div class="brand">Plataforma Privada</div>
+        <div>
+            <span id="room-display" style="margin-right: 15px; font-weight: bold;"></span>
+            <button class="btn-link" onclick="copiarEnlace()">Copiar Enlace</button>
+        </div>
+    </header>
+
+    <div id="main-container">
+        <div id="workspace">
+            <div class="draggable-video" id="cam-local-container" style="top: 50px; left: 50px;">
+                <div class="drag-header" id="cam-local-containerheader">Mi Camara</div>
+                <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+        </div>
+
+        <div id="right-sidebar">
+            <div class="sidebar-tabs">
+                <button id="btn-tab-chat" class="active" onclick="switchTab('chat')">Chat</button>
+                <button id="btn-tab-polls" onclick="switchTab('polls')">Encuestas</button>
+            </div>
+            
+            <div id="tab-chat" class="tab-content active">
+                <div id="chat-messages"></div>
+                <div class="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Mensaje..." onkeypress="if(event.key === 'Enter') enviarMensaje()">
+                    <button onclick="enviarMensaje()">Enviar</button>
+                </div>
+            </div>
+
+            <div id="tab-polls" class="tab-content">
+                <div class="poll-box" id="create-poll">
+                    <input type="text" id="poll-q" placeholder="Pregunta...">
+                    <input type="number" id="poll-timer-input" placeholder="Segundos (vacio = sin limite)" min="5">
+                    <div id="poll-options-container">
+                        <input type="text" class="poll-opt" placeholder="Opcion 1">
+                        <input type="text" class="poll-opt" placeholder="Opcion 2">
+                    </div>
+                    <button class="btn-link" onclick="agregarOpcion()" style="width: 100%; margin-bottom: 10px; background: #34495e;">Agregar Opcion (Max 7)</button>
+                    <button class="primary" style="width: 100%;" onclick="crearEncuestaGlobal()">Iniciar Encuesta</button>
+                </div>
+                <div id="active-polls"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-audio" onclick="toggleAudio()">Silenciar</button>
+        <button id="btn-video" onclick="toggleVideo()">Apagar Camara</button>
+        <button id="btn-share" onclick="compartirPantalla()">Compartir Pantalla</button>
+        <button class="primary" onclick="togglePanelLateral()">Panel Lateral</button>
+        <button class="danger" onclick="location.reload()">Salir</button>
+    </div>
+
+    <script>
+        // Configuración oficial de tu proyecto Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMny1U0WtotfSJwLryDw-dtxppf9IdlgE",
+            authDomain: "plataforma-vip-e7452.firebaseapp.com",
+            databaseURL: "https://plataforma-vip-e7452-default-rtdb.firebaseio.com",
+            projectId: "plataforma-vip-e7452",
+            storageBucket: "plataforma-vip-e7452.firebasestorage.app",
+            messagingSenderId: "162507009258",
+            appId: "1:162507009258:web:4fed522b1b66966eb0bb93"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = "Invitado";
+        let myPeerId = Math.random().toString(36).substring(2, 10);
+        let localStream;
+        let peers = {}; 
+        
+        let roomID = new URLSearchParams(window.location.search).get('sala');
+        if (!roomID) {
+            roomID = Math.random().toString(36).substring(2, 9);
+            window.history.pushState({}, '', '?sala=' + roomID);
+        }
+        document.getElementById('room-display').innerText = 'Sala: ' + roomID;
+
+        function copiarEnlace() {
+            navigator.clipboard.writeText(window.location.href).then(() => alert("Enlace copiado. \nClave: felizdiaks"));
+        }
+
+        function verificarAcceso() {
+            const pwd = document.getElementById('password-input').value;
+            const user = document.getElementById('username-input').value.trim();
+            if (pwd === 'felizdiaks') {
+                currentUser = user !== "" ? user : "Invitado";
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('cam-local-containerheader').innerText = currentUser;
+                
+                navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+                    localStream = stream;
+                    document.getElementById('localVideo').srcObject = stream;
+                    conectarASalaFirebase(); 
+                }).catch(e => alert("Permite la camara para entrar."));
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        const chatRef = db.ref(`salas/${roomID}/chat`);
+        
+        function enviarMensaje() {
+            const msgInput = document.getElementById('chat-input');
+            const msg = msgInput.value.trim();
+            if(!msg) return;
+            chatRef.push({ user: currentUser, text: msg });
+            msgInput.value = '';
+        }
+
+        chatRef.on('child_added', snapshot => {
+            const data = snapshot.val();
+            const msgArea = document.getElementById('chat-messages');
+            msgArea.innerHTML += `<div class="chat-msg"><strong>${data.user}:</strong> ${data.text}</div>`;
+            msgArea.scrollTop = msgArea.scrollHeight;
+        });
+
+        const pollsRef = db.ref(`salas/${roomID}/encuestas`);
+        let totalOpciones = 2;
+        let activeTimers = {};
+
+        function agregarOpcion() {
+            if (totalOpciones >= 7) return alert("Limite alcanzado.");
+            totalOpciones++;
+            const input = document.createElement('input');
+            input.type = 'text'; input.className = 'poll-opt'; input.placeholder = 'Opcion ' + totalOpciones;
+            document.getElementById('poll-options-container').appendChild(input);
+        }
+
+        function crearEncuestaGlobal() {
+            const q = document.getElementById('poll-q').value.trim();
+            const tiempoInput = parseInt(document.getElementById('poll-timer-input').value);
+            const inputs = document.querySelectorAll('.poll-opt');
+            let opciones = [];
+            inputs.forEach(input => { if (input.value.trim()) opciones.push(input.value.trim()); });
+
+            if (!q || opciones.length < 2) return alert("Escribe pregunta y 2 opciones.");
+            
+            const pollId = 'poll-' + Date.now();
+            pollsRef.child(pollId).set({
+                pregunta: q,
+                opciones: opciones,
+                tiempo: isNaN(tiempoInput) ? null : tiempoInput,
+                creador: currentUser
+            });
+
+            document.getElementById('poll-q').value = '';
+            document.getElementById('poll-timer-input').value = '';
+            document.getElementById('poll-options-container').innerHTML = `<input type="text" class="poll-opt" placeholder="Opcion 1"><input type="text" class="poll-opt" placeholder="Opcion 2">`;
+            totalOpciones = 2;
+        }
+
+        pollsRef.on('child_added', snapshot => {
+            const pollId = snapshot.key;
+            const data = snapshot.val();
+            renderizarEncuesta(pollId, data);
+        });
+
+        db.ref(`salas/${roomID}/votos`).on('child_added', snapshot => {
+            const voto = snapshot.val();
+            const contenedor = document.getElementById(`votos-${voto.pollId}`);
+            if (contenedor) {
+                contenedor.innerHTML += `<div class="vote-record"><strong>${voto.user}</strong> voto por: ${voto.opcion}</div>`;
+            }
+        });
+
+        pollsRef.on('child_removed', snapshot => {
+            const encuesta = document.getElementById(snapshot.key);
+            if (encuesta) encuesta.remove();
+        });
+
+        function borrarEncuestaGlobal(pollId) {
+            pollsRef.child(pollId).remove();
+            db.ref(`salas/${roomID}/votos`).orderByChild('pollId').equalTo(pollId).once('value', snapshot => {
+                snapshot.forEach(child => child.ref.remove());
+            });
+        }
+
+        function renderizarEncuesta(pollId, data) {
+            let pollHTML = `<div class="poll-result" id="${pollId}">
+                <button class="delete-poll-btn" onclick="borrarEncuestaGlobal('${pollId}')">X</button>
+                <strong style="font-size: 16px; display: block; padding-right: 30px;">${data.pregunta}</strong><br>`;
+            
+            if (data.tiempo) pollHTML += `<span class="poll-timer-display" id="reloj-${pollId}">Tiempo: ${data.tiempo}s</span>`;
+            
+            data.opciones.forEach(op => {
+                const opLimpia = op.replace(/'/g, "\\'"); 
+                pollHTML += `<button class="poll-btn" style="width:100%; margin-bottom:8px; background: #2c3e50; border: 1px solid #34495e; color: white; padding: 10px; cursor: pointer; border-radius: 5px;" 
+                             onclick="enviarVotoGlobal('${pollId}', '${opLimpia}', ${data.tiempo ? true : false})">${op}</button>`;
+            });
+            pollHTML += `<div id="votos-${pollId}" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; ${data.tiempo ? 'display:none;' : ''}"></div></div>`;
+            
+            document.getElementById('active-polls').insertAdjacentHTML('afterbegin', pollHTML);
+
+            if (data.tiempo) {
+                let timeLeft = data.tiempo;
+                activeTimers[pollId] = setInterval(() => {
+                    const reloj = document.getElementById(`reloj-${pollId}`);
+                    if (!reloj) return clearInterval(activeTimers[pollId]);
+                    
+                    timeLeft--;
+                    reloj.innerText = `Tiempo: ${timeLeft}s`;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(activeTimers[pollId]);
+                        reloj.innerText = "Encuesta Finalizada";
+                        document.querySelectorAll(`#${pollId} .poll-btn`).forEach(b => b.disabled = true);
+                        document.getElementById(`votos-${pollId}`).style.display = 'block'; 
+                    }
+                }, 1000);
+            }
+        }
+
+        function enviarVotoGlobal(pollId, opcionElegida, esConTiempo) {
+            document.querySelectorAll(`#${pollId} .poll-btn`).forEach(b => b.disabled = true);
+            db.ref(`salas/${roomID}/votos`).push({ pollId: pollId, user: currentUser, opcion: opcionElegida });
+            if (esConTiempo) alert("Voto registrado. Se revelara al terminar el tiempo.");
+        }
+
+        const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        const signalingRef = db.ref(`salas/${roomID}/signals`);
+        const usersRef = db.ref(`salas/${roomID}/users`);
+
+        function conectarASalaFirebase() {
+            usersRef.child(myPeerId).set({ nombre: currentUser, timestamp: Date.now() });
+            usersRef.child(myPeerId).onDisconnect().remove();
+
+            usersRef.on('child_added', snapshot => {
+                const remotePeerId = snapshot.key;
+                const remoteData = snapshot.val();
+                if (remotePeerId !== myPeerId && remoteData.timestamp >= Date.now() - 5000) {
+                    crearConexionWebRTC(remotePeerId, remoteData.nombre, true);
+                }
+            });
+
+            signalingRef.child(myPeerId).on('child_added', async snapshot => {
+                const signal = snapshot.val();
+                if (!peers[signal.from]) {
+                    crearConexionWebRTC(signal.from, signal.nombre, false);
+                }
+                
+                const pc = peers[signal.from].pc;
+
+                if (signal.type === 'offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    enviarSignal(signal.from, { type: 'answer', sdp: answer });
+                } else if (signal.type === 'answer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                } else if (signal.type === 'candidate') {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                }
+                
+                snapshot.ref.remove(); 
+            });
+
+            usersRef.on('child_removed', snapshot => {
+                const remotePeerId = snapshot.key;
+                if (peers[remotePeerId]) {
+                    document.getElementById(`cam-${remotePeerId}-container`)?.remove();
+                    delete peers[remotePeerId];
+                }
+            });
+        }
+
+        function crearConexionWebRTC(remotePeerId, remoteNombre, esLlamador) {
+            const pc = new RTCPeerConnection(configWebRTC);
+            peers[remotePeerId] = { pc: pc, nombre: remoteNombre };
+
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.onicecandidate = e => {
+                if (e.candidate) enviarSignal(remotePeerId, { type: 'candidate', candidate: e.candidate });
+            };
+
+            pc.ontrack = e => {
+                crearVentanaVideo(remotePeerId, remoteNombre, e.streams[0]);
+            };
+
+            if (esLlamador) {
+                pc.createOffer().then(offer => {
+                    pc.setLocalDescription(offer);
+                    enviarSignal(remotePeerId, { type: 'offer', sdp: offer });
+                });
+            }
+        }
+
+        function enviarSignal(toPeerId, data) {
+            data.from = myPeerId;
+            data.nombre = currentUser;
+            signalingRef.child(toPeerId).push(data);
+        }
+
+        function crearVentanaVideo(id, nombre, stream) {
+            if (document.getElementById(`cam-${id}-container`)) return; 
+            
+            const div = document.createElement('div');
+            div.className = 'draggable-video';
+            div.id = `cam-${id}-container`;
+            div.style.top = Math.random() * 200 + 'px';
+            div.style.left = Math.random() * 200 + 'px';
+            
+            div.innerHTML = `
+                <div class="drag-header" id="${div.id}header">${nombre}</div>
+                <video autoplay playsinline srcObject></video>
+            `;
+            document.getElementById('workspace').appendChild(div);
+            div.querySelector('video').srcObject = stream;
+            
+            hacerArrastrable(div);
+        }
+
+        function toggleAudio() { 
+            const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled;
+            document.getElementById('btn-audio').innerText = track.enabled ? "Silenciar" : "Activar Audio";
+        }
+        function toggleVideo() { 
+            const track = localStream.getVideoTracks()[0]; track.enabled = !track.enabled;
+            document.getElementById('btn-video').innerText = track.enabled ? "Apagar Camara" : "Encender Camara";
+        }
+        function togglePanelLateral() {
+            const panel = document.getElementById('right-sidebar');
+            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+        }
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.sidebar-tabs button').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`btn-tab-${tab}`).classList.add('active');
+        }
+
+        function compartirPantalla() {
+            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(screenStream => {
+                const screenTrack = screenStream.getVideoTracks()[0];
+                document.getElementById('localVideo').srcObject = screenStream;
+                
+                Object.values(peers).forEach(peerObj => {
+                    const sender = peerObj.pc.getSenders().find(s => s.track.kind === 'video');
+                    sender.replaceTrack(screenTrack);
+                });
+
+                screenTrack.onended = () => {
+                    const camTrack = localStream.getVideoTracks()[0];
+                    document.getElementById('localVideo').srcObject = localStream;
+                    Object.values(peers).forEach(peerObj => {
+                        const sender = peerObj.pc.getSenders().find(s => s.track.kind === 'video');
+                        sender.replaceTrack(camTrack);
+                    });
+                };
+            }).catch(e => console.log("Pantalla cancelada"));
+        }
+
+        hacerArrastrable(document.getElementById("cam-local-container"));
+        function hacerArrastrable(el) {
+            let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+            const header = document.getElementById(el.id + "header");
+            header.onmousedown = function(e) {
+                e.preventDefault(); p3 = e.clientX; p4 = e.clientY;
+                document.onmouseup = function() { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = function(e) {
+                    e.preventDefault(); p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+                    p3 = e.clientX; p4 = e.clientY;
+                    el.style.top = (el.offsetTop - p2) + "px"; el.style.left = (el.offsetLeft - p1) + "px";
+                };
+            };
+        }
+    </script>
+</body>
+</html>
