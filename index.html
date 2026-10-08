@@ -2,26 +2,29 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sala VIP - Kevin y Sofi</title>
-    <!-- Librerías de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #27ae60; border-radius: 4px; }
+
         body { 
             margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             background: #0f2027; color: white; overflow: hidden; 
-            display: flex; flex-direction: column; height: 100vh;
+            display: flex; flex-direction: column; height: 100dvh; 
         }
         
         #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
             background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-            z-index: 1000; display: flex; justify-content: center; align-items: center;
+            z-index: 10000; display: flex; justify-content: center; align-items: center;
         }
         .login-box {
-            background: rgba(26, 26, 26, 0.9); padding: 40px; border-radius: 15px; 
-            text-align: center; border: 2px solid #27ae60; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 300px;
+            background: rgba(26, 26, 26, 0.9); padding: 30px; border-radius: 15px; 
+            text-align: center; border: 2px solid #27ae60; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 85%; max-width: 320px;
         }
         .login-box input {
             display: block; width: 90%; margin: 15px auto; padding: 12px;
@@ -30,70 +33,126 @@
         .login-box input:focus { border: 2px solid #27ae60; }
         
         header {
-            background: rgba(255, 255, 255, 0.05); padding: 15px 30px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.05); padding: 10px 20px;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 100;
         }
-        .brand { font-size: 24px; font-weight: bold; }
+        .brand { font-size: 20px; font-weight: bold; }
         .btn-link {
             background: linear-gradient(45deg, #3498db, #2980b9); color: white; 
-            border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold;
+            border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 13px;
         }
 
         #main-container { display: flex; flex-grow: 1; overflow: hidden; position: relative; }
-        #workspace { position: relative; flex-grow: 1; width: 100%; height: 100%; }
+        
+        /* WORKSPACE CON BARRA DE DESPLAZAMIENTO PARA MÓVILES Y PC */
+        #workspace { 
+            position: relative; flex-grow: 1; width: 100%; height: 100%; 
+            overflow-y: auto; overflow-x: hidden;
+        }
 
         #right-sidebar {
             width: 350px; background: #1a1a1a; border-left: 1px solid #333;
-            display: none; flex-direction: column; z-index: 90;
+            display: none; flex-direction: column; z-index: 9999;
         }
         
-        .sidebar-tabs { display: flex; background: #2c3e50; }
+        .sidebar-tabs { display: flex; background: #2c3e50; flex-shrink: 0; }
         .sidebar-tabs button {
             flex: 1; padding: 15px; background: none; border: none; color: white; 
             font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent;
         }
         .sidebar-tabs button.active { border-bottom: 3px solid #2ecc71; background: #34495e; }
+        .mobile-only-btn { display: none; }
         
-        .tab-content { display: none; flex-direction: column; flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .tab-content { display: none; flex-direction: column; flex-grow: 1; padding: 15px; height: 100%; overflow: hidden; }
         .tab-content.active { display: flex; }
 
-        /* Chat */
-        #chat-messages { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 10px; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 5px; }
         .chat-msg { background: #34495e; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; word-wrap: break-word; }
-        .chat-input-container { display: flex; gap: 10px; }
+        .chat-input-container { display: flex; gap: 8px; flex-shrink: 0; }
         .chat-input-container input { flex-grow: 1; padding: 10px; border-radius: 5px; border: none; outline: none; }
         .chat-input-container button { padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
-        /* Encuestas */
-        .poll-box { background: #2c3e50; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .poll-box input { width: 90%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; box-sizing: border-box; }
-        .poll-result { background: #34495e; padding: 15px; border-radius: 8px; margin-top: 10px; position: relative; }
+        #create-poll { flex-shrink: 0; background: #2c3e50; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        #create-poll input { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: none; box-sizing: border-box; }
+        #active-polls { flex-grow: 1; overflow-y: auto; padding-right: 5px; padding-bottom: 20px; }
+        .poll-result { background: #34495e; padding: 15px; border-radius: 8px; margin-bottom: 15px; position: relative; }
         .delete-poll-btn { position: absolute; top: 10px; right: 10px; background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-weight: bold; cursor: pointer; }
         .vote-record { font-size: 13px; color: #2ecc71; margin-top: 8px; padding-left: 5px; border-left: 2px solid #2ecc71; }
-        .poll-timer-display { color: #f1c40f; font-weight: bold; margin-bottom: 10px; display: block; font-size: 14px; }
         
-        /* Videos */
+        /* VIDEOS Y PANTALLA COMPARTIDA */
         .draggable-video {
             position: absolute; background: #1a1a1a; border-radius: 10px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.6); overflow: hidden; border: 2px solid #333;
-            transition: width 0.3s ease;
+            display: flex; flex-direction: column;
+            resize: both; 
+            min-width: 200px; min-height: 150px;
+            z-index: 10;
         }
+        
+        #presentation-container {
+            position: absolute; display: none; flex-direction: column;
+            background: #000; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            border: 2px solid #3498db; overflow: hidden; resize: both; z-index: 50;
+            min-width: 300px; min-height: 200px;
+        }
+
+        /* NUEVA BARRA DE TÍTULO CON CONTROLES (Mover, Minimizar, FullScreen, Ocultar) */
         .drag-header {
-            padding: 10px; cursor: grab; background: #2c3e50; color: white;
-            font-weight: bold; text-align: center; user-select: none;
+            padding: 8px 10px; background: #2c3e50; color: white;
+            font-weight: bold; text-align: left; user-select: none; font-size: 14px; 
+            flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
         }
-        video { display: block; width: 300px; height: auto; background: black; }
+        .drag-title { flex-grow: 1; cursor: grab; }
+        .video-actions { display: flex; gap: 5px; }
+        .video-actions button {
+            background: rgba(255,255,255,0.1); border: none; border-radius: 3px; 
+            color: white; font-size: 12px; cursor: pointer; padding: 4px 6px;
+            transition: 0.2s;
+        }
+        .video-actions button:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
+
+        video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; flex-grow: 1; }
+        #cam-local-container { width: 280px; height: 210px; }
 
         .controls {
-            background: rgba(0, 0, 0, 0.9); padding: 15px; display: flex; justify-content: center; gap: 15px; z-index: 100;
+            flex-shrink: 0; background: rgba(0, 0, 0, 0.9); padding: 15px; display: flex; 
+            z-index: 100; align-items: center; gap: 10px;
+            overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
         }
         .controls button {
-            background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;
+            flex: 0 0 auto; background: #27ae60; color: white; border: none; padding: 12px 18px; 
+            border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;
         }
         .controls button:hover:not(:disabled) { filter: brightness(1.1); }
-        .controls button.danger { background: #e74c3c; }
+        .controls button.danger { background: #e74c3c !important; }
         .controls button.primary { background: #8e44ad; }
+        .controls button.warning { background: #f39c12; }
+
+        /* MÓVILES */
+        @media (max-width: 768px) {
+            header { flex-direction: column; gap: 10px; padding: 10px; }
+            #room-display { display: block; margin-bottom: 5px; }
+            
+            /* BARRA QUE BAJE EN TELÉFONO: Forzamos la barra visible azul para que el usuario sepa que puede bajar */
+            #workspace { display: flex; flex-direction: column; padding: 10px; gap: 15px; align-items: center; overflow-y: scroll; }
+            #workspace::-webkit-scrollbar { width: 6px; display: block; }
+            #workspace::-webkit-scrollbar-thumb { background: #3498db; border-radius: 10px; }
+            
+            .draggable-video { 
+                position: relative !important; top: auto !important; left: auto !important; 
+                width: 100% !important; height: auto !important; max-width: 100%; resize: none !important; 
+            }
+            #presentation-container {
+                position: relative !important; top: auto !important; left: auto !important; 
+                width: 100% !important; height: 300px !important; order: -2; resize: none !important;
+            }
+            video { min-height: 200px; }
+            #btn-share { display: none !important; }
+            #right-sidebar { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 9999; background: #0f2027; }
+            .mobile-only-btn { display: block; background: #e74c3c !important; color: white !important; }
+        }
     </style>
 </head>
 <body>
@@ -102,24 +161,45 @@
         <div class="login-box">
             <h2>Acceso a Sala VIP</h2>
             <input type="text" id="username-input" placeholder="Tu Nombre">
-            <input type="password" id="password-input" placeholder="Contrasena">
+            <input type="password" id="password-input" placeholder="Contraseña">
             <button onclick="verificarAcceso()" style="width: 100%; margin-top: 10px; padding: 12px;">Entrar a la Sala</button>
-            <p id="login-error" style="color: #e74c3c; display: none; font-weight: bold; margin-top: 15px;">Contrasena incorrecta.</p>
+            <p id="login-error" style="color: #e74c3c; display: none; font-weight: bold; margin-top: 15px;">Contraseña incorrecta.</p>
         </div>
     </div>
 
     <header>
         <div class="brand">Plataforma Privada</div>
-        <div>
-            <span id="room-display" style="margin-right: 15px; font-weight: bold;"></span>
+        <div style="text-align: center;">
+            <span id="room-display" style="margin-right: 10px; font-weight: bold; font-size: 14px;"></span>
             <button class="btn-link" onclick="copiarEnlace()">Copiar Enlace</button>
         </div>
     </header>
 
     <div id="main-container">
         <div id="workspace">
-            <div class="draggable-video" id="cam-local-container" style="top: 50px; left: 50px;">
-                <div class="drag-header" id="cam-local-containerheader">Mi Camara</div>
+            <!-- Pantalla Compartida -->
+            <div id="presentation-container" class="draggable-video">
+                <div class="drag-header" id="presentation-containerheader">
+                    <span class="drag-title">Pantalla Compartida</span>
+                    <div class="video-actions">
+                        <button title="Minimizar" onclick="minimizarVideo('presentation-container')">➖</button>
+                        <button title="Pantalla Completa" onclick="fullscreenVideo('presentation-video')">🔲</button>
+                        <button title="Ocultar" onclick="ocultarVideo('presentation-container')">❌</button>
+                    </div>
+                </div>
+                <video id="presentation-video" autoplay playsinline muted></video>
+            </div>
+
+            <!-- Cámara Local -->
+            <div class="draggable-video" id="cam-local-container" style="top: 20px; left: 20px;">
+                <div class="drag-header" id="cam-local-containerheader">
+                    <span class="drag-title" id="local-title">Mi Cámara</span>
+                    <div class="video-actions">
+                        <button title="Minimizar" onclick="minimizarVideo('cam-local-container')">➖</button>
+                        <button title="Pantalla Completa" onclick="fullscreenVideo('localVideo')">🔲</button>
+                        <button title="Ocultar" onclick="ocultarVideo('cam-local-container')">❌</button>
+                    </div>
+                </div>
                 <video id="localVideo" autoplay muted playsinline></video>
             </div>
         </div>
@@ -128,6 +208,7 @@
             <div class="sidebar-tabs">
                 <button id="btn-tab-chat" class="active" onclick="switchTab('chat')">Chat</button>
                 <button id="btn-tab-polls" onclick="switchTab('polls')">Encuestas</button>
+                <button class="mobile-only-btn" onclick="togglePanelLateral()">Cerrar X</button>
             </div>
             
             <div id="tab-chat" class="tab-content active">
@@ -139,15 +220,15 @@
             </div>
 
             <div id="tab-polls" class="tab-content">
-                <div class="poll-box" id="create-poll">
+                <div id="create-poll">
                     <input type="text" id="poll-q" placeholder="Pregunta...">
-                    <input type="number" id="poll-timer-input" placeholder="Segundos (vacio = sin limite)" min="5">
+                    <input type="number" id="poll-timer-input" placeholder="Segundos (vacío = sin límite)" min="5">
                     <div id="poll-options-container">
-                        <input type="text" class="poll-opt" placeholder="Opcion 1">
-                        <input type="text" class="poll-opt" placeholder="Opcion 2">
+                        <input type="text" class="poll-opt" placeholder="Opción 1">
+                        <input type="text" class="poll-opt" placeholder="Opción 2">
                     </div>
-                    <button class="btn-link" onclick="agregarOpcion()" style="width: 100%; margin-bottom: 10px; background: #34495e;">Agregar Opcion (Max 7)</button>
-                    <button class="primary" style="width: 100%;" onclick="crearEncuestaGlobal()">Iniciar Encuesta</button>
+                    <button class="btn-link" onclick="agregarOpcion()" style="width: 100%; margin-bottom: 10px; background: #34495e;">Agregar Opción</button>
+                    <button class="primary" style="width: 100%; padding: 10px; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;" onclick="crearEncuestaGlobal()">Iniciar Encuesta</button>
                 </div>
                 <div id="active-polls"></div>
             </div>
@@ -156,14 +237,14 @@
 
     <div class="controls">
         <button id="btn-audio" onclick="toggleAudio()">Silenciar</button>
-        <button id="btn-video" onclick="toggleVideo()">Apagar Camara</button>
+        <button id="btn-video" onclick="toggleVideo()">Apagar Cámara</button>
         <button id="btn-share" onclick="compartirPantalla()">Compartir Pantalla</button>
-        <button class="primary" onclick="togglePanelLateral()">Panel Lateral</button>
+        <button class="primary" onclick="togglePanelLateral()">Abrir Chat/Encuestas</button>
+        <button id="btn-show-all" class="warning" style="display:none;" onclick="mostrarOcultos()">👁️ Mostrar Ocultos</button>
         <button class="danger" onclick="location.reload()">Salir</button>
     </div>
 
     <script>
-        // Configuración oficial de tu proyecto Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBMny1U0WtotfSJwLryDw-dtxppf9IdlgE",
             authDomain: "plataforma-vip-e7452.firebaseapp.com",
@@ -193,26 +274,118 @@
             navigator.clipboard.writeText(window.location.href).then(() => alert("Enlace copiado. \nClave: felizdiaks"));
         }
 
-        function verificarAcceso() {
+        async function verificarAcceso() {
             const pwd = document.getElementById('password-input').value;
             const user = document.getElementById('username-input').value.trim();
             if (pwd === 'felizdiaks') {
                 currentUser = user !== "" ? user : "Invitado";
                 document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('cam-local-containerheader').innerText = currentUser;
+                document.getElementById('local-title').innerText = currentUser;
                 
-                navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-                    localStream = stream;
-                    document.getElementById('localVideo').srcObject = stream;
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    const localVideo = document.getElementById('localVideo');
+                    localVideo.srcObject = localStream;
                     conectarASalaFirebase(); 
-                }).catch(e => alert("Permite la camara para entrar."));
+                } catch (e) {
+                    alert("Permite el uso de cámara y micrófono.");
+                }
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
         }
 
+        /* --- NUEVOS CONTROLES DE VENTANAS --- */
+        function minimizarVideo(containerId) {
+            const container = document.getElementById(containerId);
+            const video = container.querySelector('video');
+            if(video.style.display === 'none') {
+                video.style.display = 'block';
+                container.style.height = container.dataset.prevHeight || '210px';
+                container.style.resize = 'both';
+            } else {
+                container.dataset.prevHeight = container.style.height;
+                video.style.display = 'none';
+                container.style.height = 'auto';
+                container.style.resize = 'none';
+            }
+        }
+
+        function fullscreenVideo(videoId) {
+            const video = document.getElementById(videoId);
+            if (video.requestFullscreen) video.requestFullscreen();
+            else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+            else if (video.msRequestFullscreen) video.msRequestFullscreen();
+        }
+
+        function ocultarVideo(containerId) {
+            document.getElementById(containerId).style.display = 'none';
+            document.getElementById('btn-show-all').style.display = 'inline-block';
+        }
+
+        function mostrarOcultos() {
+            document.querySelectorAll('.draggable-video').forEach(el => {
+                // No mostrar el contenedor de pantalla si nadie está compartiendo
+                if(el.id === 'presentation-container' && !document.getElementById('presentation-video').srcObject) return;
+                el.style.display = 'flex';
+            });
+            document.getElementById('btn-show-all').style.display = 'none';
+        }
+
+        /* --- POSICIÓN AUTOMÁTICA PANTALLA COMPARTIDA A LA DERECHA --- */
+        function posicionarPantallaCompartida() {
+            const pres = document.getElementById('presentation-container');
+            if(window.innerWidth > 768) {
+                const ancho = window.innerWidth * 0.55; // 55% de la pantalla
+                pres.style.width = ancho + 'px';
+                pres.style.height = '70vh';
+                // La ubicamos a la derecha calculando el espacio (Ancho total - Ancho del video - 30px de margen)
+                pres.style.left = (window.innerWidth - ancho - 30) + 'px';
+                pres.style.top = '20px';
+            }
+        }
+
+        function acomodarCamarasALaIzquierda() {
+            if(window.innerWidth <= 768) return; 
+            let topPos = 20;
+            const leftPos = 20;
+            
+            document.querySelectorAll('.draggable-video').forEach(el => {
+                if(el.style.display !== 'none' && el.id !== 'presentation-container') {
+                    el.style.width = '250px';
+                    el.style.height = '180px';
+                    el.style.top = topPos + 'px';
+                    el.style.left = leftPos + 'px';
+                    topPos += 200; 
+                }
+            });
+        }
+
+        /* --- ATAJO DE TECLADO --- */
+        let xKeyCount = 0;
+        let xKeyTimer;
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') return;
+
+            if (e.key.toLowerCase() === 'x') {
+                xKeyCount++;
+                clearTimeout(xKeyTimer);
+                if (xKeyCount === 3) {
+                    const panel = document.getElementById('right-sidebar');
+                    if (panel.style.display !== 'flex') togglePanelLateral();
+                    switchTab('chat');
+                    document.getElementById('chat-input').focus();
+                    xKeyCount = 0;
+                } else {
+                    xKeyTimer = setTimeout(() => { xKeyCount = 0; }, 1000);
+                }
+            } else {
+                xKeyCount = 0; 
+            }
+        });
+
+        /* --- CHAT Y ENCUESTAS --- */
         const chatRef = db.ref(`salas/${roomID}/chat`);
-        
         function enviarMensaje() {
             const msgInput = document.getElementById('chat-input');
             const msg = msgInput.value.trim();
@@ -220,7 +393,6 @@
             chatRef.push({ user: currentUser, text: msg });
             msgInput.value = '';
         }
-
         chatRef.on('child_added', snapshot => {
             const data = snapshot.val();
             const msgArea = document.getElementById('chat-messages');
@@ -233,10 +405,10 @@
         let activeTimers = {};
 
         function agregarOpcion() {
-            if (totalOpciones >= 7) return alert("Limite alcanzado.");
+            if (totalOpciones >= 7) return alert("Límite alcanzado.");
             totalOpciones++;
             const input = document.createElement('input');
-            input.type = 'text'; input.className = 'poll-opt'; input.placeholder = 'Opcion ' + totalOpciones;
+            input.type = 'text'; input.className = 'poll-opt'; input.placeholder = 'Opción ' + totalOpciones;
             document.getElementById('poll-options-container').appendChild(input);
         }
 
@@ -250,59 +422,33 @@
             if (!q || opciones.length < 2) return alert("Escribe pregunta y 2 opciones.");
             
             const pollId = 'poll-' + Date.now();
-            pollsRef.child(pollId).set({
-                pregunta: q,
-                opciones: opciones,
-                tiempo: isNaN(tiempoInput) ? null : tiempoInput,
-                creador: currentUser
-            });
-
-            document.getElementById('poll-q').value = '';
-            document.getElementById('poll-timer-input').value = '';
-            document.getElementById('poll-options-container').innerHTML = `<input type="text" class="poll-opt" placeholder="Opcion 1"><input type="text" class="poll-opt" placeholder="Opcion 2">`;
+            pollsRef.child(pollId).set({ pregunta: q, opciones: opciones, tiempo: isNaN(tiempoInput) ? null : tiempoInput, creador: currentUser });
+            document.getElementById('poll-q').value = ''; document.getElementById('poll-timer-input').value = '';
+            document.getElementById('poll-options-container').innerHTML = `<input type="text" class="poll-opt" placeholder="Opción 1"><input type="text" class="poll-opt" placeholder="Opción 2">`;
             totalOpciones = 2;
         }
 
-        pollsRef.on('child_added', snapshot => {
-            const pollId = snapshot.key;
-            const data = snapshot.val();
-            renderizarEncuesta(pollId, data);
-        });
-
+        pollsRef.on('child_added', snapshot => renderizarEncuesta(snapshot.key, snapshot.val()));
         db.ref(`salas/${roomID}/votos`).on('child_added', snapshot => {
             const voto = snapshot.val();
             const contenedor = document.getElementById(`votos-${voto.pollId}`);
-            if (contenedor) {
-                contenedor.innerHTML += `<div class="vote-record"><strong>${voto.user}</strong> voto por: ${voto.opcion}</div>`;
-            }
+            if (contenedor) contenedor.innerHTML += `<div class="vote-record"><strong>${voto.user}</strong> votó por: ${voto.opcion}</div>`;
         });
-
-        pollsRef.on('child_removed', snapshot => {
-            const encuesta = document.getElementById(snapshot.key);
-            if (encuesta) encuesta.remove();
-        });
+        pollsRef.on('child_removed', snapshot => document.getElementById(snapshot.key)?.remove());
 
         function borrarEncuestaGlobal(pollId) {
             pollsRef.child(pollId).remove();
-            db.ref(`salas/${roomID}/votos`).orderByChild('pollId').equalTo(pollId).once('value', snapshot => {
-                snapshot.forEach(child => child.ref.remove());
-            });
+            db.ref(`salas/${roomID}/votos`).orderByChild('pollId').equalTo(pollId).once('value', snapshot => snapshot.forEach(child => child.ref.remove()));
         }
 
         function renderizarEncuesta(pollId, data) {
-            let pollHTML = `<div class="poll-result" id="${pollId}">
-                <button class="delete-poll-btn" onclick="borrarEncuestaGlobal('${pollId}')">X</button>
-                <strong style="font-size: 16px; display: block; padding-right: 30px;">${data.pregunta}</strong><br>`;
-            
+            let pollHTML = `<div class="poll-result" id="${pollId}"><button class="delete-poll-btn" onclick="borrarEncuestaGlobal('${pollId}')">X</button><strong style="font-size: 16px; display: block; padding-right: 30px;">${data.pregunta}</strong><br>`;
             if (data.tiempo) pollHTML += `<span class="poll-timer-display" id="reloj-${pollId}">Tiempo: ${data.tiempo}s</span>`;
-            
             data.opciones.forEach(op => {
                 const opLimpia = op.replace(/'/g, "\\'"); 
-                pollHTML += `<button class="poll-btn" style="width:100%; margin-bottom:8px; background: #2c3e50; border: 1px solid #34495e; color: white; padding: 10px; cursor: pointer; border-radius: 5px;" 
-                             onclick="enviarVotoGlobal('${pollId}', '${opLimpia}', ${data.tiempo ? true : false})">${op}</button>`;
+                pollHTML += `<button class="poll-btn" style="width:100%; margin-bottom:8px; background: #2c3e50; border: 1px solid #34495e; color: white; padding: 10px; cursor: pointer; border-radius: 5px;" onclick="enviarVotoGlobal('${pollId}', '${opLimpia}')">${op}</button>`;
             });
             pollHTML += `<div id="votos-${pollId}" style="margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; ${data.tiempo ? 'display:none;' : ''}"></div></div>`;
-            
             document.getElementById('active-polls').insertAdjacentHTML('afterbegin', pollHTML);
 
             if (data.tiempo) {
@@ -310,13 +456,9 @@
                 activeTimers[pollId] = setInterval(() => {
                     const reloj = document.getElementById(`reloj-${pollId}`);
                     if (!reloj) return clearInterval(activeTimers[pollId]);
-                    
-                    timeLeft--;
-                    reloj.innerText = `Tiempo: ${timeLeft}s`;
-                    
+                    timeLeft--; reloj.innerText = `Tiempo: ${timeLeft}s`;
                     if (timeLeft <= 0) {
-                        clearInterval(activeTimers[pollId]);
-                        reloj.innerText = "Encuesta Finalizada";
+                        clearInterval(activeTimers[pollId]); reloj.innerText = "Encuesta Finalizada";
                         document.querySelectorAll(`#${pollId} .poll-btn`).forEach(b => b.disabled = true);
                         document.getElementById(`votos-${pollId}`).style.display = 'block'; 
                     }
@@ -324,15 +466,21 @@
             }
         }
 
-        function enviarVotoGlobal(pollId, opcionElegida, esConTiempo) {
+        function enviarVotoGlobal(pollId, opcionElegida) {
             document.querySelectorAll(`#${pollId} .poll-btn`).forEach(b => b.disabled = true);
             db.ref(`salas/${roomID}/votos`).push({ pollId: pollId, user: currentUser, opcion: opcionElegida });
-            if (esConTiempo) alert("Voto registrado. Se revelara al terminar el tiempo.");
         }
 
-        const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        /* --- MOTOR WEBRTC --- */
+        const configWebRTC = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.services.mozilla.com' }
+            ] 
+        };
         const signalingRef = db.ref(`salas/${roomID}/signals`);
         const usersRef = db.ref(`salas/${roomID}/users`);
+        let iceCandidatesQueue = {};
 
         function conectarASalaFirebase() {
             usersRef.child(myPeerId).set({ nombre: currentUser, timestamp: Date.now() });
@@ -341,30 +489,43 @@
             usersRef.on('child_added', snapshot => {
                 const remotePeerId = snapshot.key;
                 const remoteData = snapshot.val();
-                if (remotePeerId !== myPeerId && remoteData.timestamp >= Date.now() - 5000) {
-                    crearConexionWebRTC(remotePeerId, remoteData.nombre, true);
+                if (remotePeerId !== myPeerId) {
+                    const soyElLlamador = myPeerId > remotePeerId;
+                    crearConexionWebRTC(remotePeerId, remoteData.nombre, soyElLlamador);
                 }
             });
 
             signalingRef.child(myPeerId).on('child_added', async snapshot => {
                 const signal = snapshot.val();
-                if (!peers[signal.from]) {
-                    crearConexionWebRTC(signal.from, signal.nombre, false);
-                }
-                
+                if (!peers[signal.from]) crearConexionWebRTC(signal.from, signal.nombre, false);
                 const pc = peers[signal.from].pc;
 
-                if (signal.type === 'offer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    enviarSignal(signal.from, { type: 'answer', sdp: answer });
-                } else if (signal.type === 'answer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-                } else if (signal.type === 'candidate') {
-                    await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-                }
-                
+                try {
+                    if (signal.type === 'offer') {
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        enviarSignal(signal.from, { type: 'answer', sdp: answer });
+                        if (iceCandidatesQueue[signal.from]) {
+                            for (const c of iceCandidatesQueue[signal.from]) await pc.addIceCandidate(c).catch(console.error);
+                            delete iceCandidatesQueue[signal.from];
+                        }
+                    } else if (signal.type === 'answer') {
+                        await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                        if (iceCandidatesQueue[signal.from]) {
+                            for (const c of iceCandidatesQueue[signal.from]) await pc.addIceCandidate(c).catch(console.error);
+                            delete iceCandidatesQueue[signal.from];
+                        }
+                    } else if (signal.type === 'candidate') {
+                        const candidate = new RTCIceCandidate(signal.candidate);
+                        if (pc.remoteDescription && pc.remoteDescription.type) {
+                            await pc.addIceCandidate(candidate).catch(console.error);
+                        } else {
+                            if (!iceCandidatesQueue[signal.from]) iceCandidatesQueue[signal.from] = [];
+                            iceCandidatesQueue[signal.from].push(candidate);
+                        }
+                    }
+                } catch (e) { console.log("Reintentando señal..."); }
                 snapshot.ref.remove(); 
             });
 
@@ -378,17 +539,62 @@
         }
 
         function crearConexionWebRTC(remotePeerId, remoteNombre, esLlamador) {
+            if (peers[remotePeerId]) return;
+
             const pc = new RTCPeerConnection(configWebRTC);
             peers[remotePeerId] = { pc: pc, nombre: remoteNombre };
 
             localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-
             pc.onicecandidate = e => {
-                if (e.candidate) enviarSignal(remotePeerId, { type: 'candidate', candidate: e.candidate });
+                if (e.candidate) enviarSignal(remotePeerId, { type: 'candidate', candidate: { candidate: e.candidate.candidate, sdpMid: e.candidate.sdpMid, sdpMLineIndex: e.candidate.sdpMLineIndex } });
             };
 
             pc.ontrack = e => {
-                crearVentanaVideo(remotePeerId, remoteNombre, e.streams[0]);
+                let div = document.getElementById(`cam-${remotePeerId}-container`);
+                if (!div) {
+                    div = document.createElement('div');
+                    div.className = 'draggable-video';
+                    div.id = `cam-${remotePeerId}-container`;
+                    
+                    if(document.getElementById('presentation-container').style.display === 'flex' && window.innerWidth > 768) {
+                        div.style.top = (document.querySelectorAll('.draggable-video').length * 200) + 'px';
+                        div.style.left = '20px';
+                    } else {
+                        div.style.top = (Math.random() * 50 + 50) + 'px';
+                        div.style.left = (Math.random() * 50 + 50) + 'px';
+                    }
+                    div.style.width = '280px';
+                    div.style.height = '210px';
+                    
+                    // AÑADIMOS LOS CONTROLES A LAS CÁMARAS DE LOS INVITADOS
+                    div.innerHTML = `
+                        <div class="drag-header" id="${div.id}header">
+                            <span class="drag-title">${remoteNombre}</span>
+                            <div class="video-actions">
+                                <button title="Minimizar" onclick="minimizarVideo('${div.id}')">➖</button>
+                                <button title="Pantalla Completa" onclick="fullscreenVideo('video-${remotePeerId}')">🔲</button>
+                                <button title="Ocultar" onclick="ocultarVideo('${div.id}')">❌</button>
+                            </div>
+                        </div>
+                        <video id="video-${remotePeerId}" autoplay playsinline></video>
+                    `;
+                    document.getElementById('workspace').appendChild(div);
+                    if(window.innerWidth > 768) hacerArrastrable(div);
+                }
+                
+                const video = div.querySelector('video');
+                if (e.streams && e.streams[0]) { video.srcObject = e.streams[0]; } 
+                else { if (!video.srcObject) video.srcObject = new MediaStream(); video.srcObject.addTrack(e.track); }
+                
+                video.onloadedmetadata = () => {
+                    video.play().catch(err => {
+                        const btnDesc = document.createElement('button');
+                        btnDesc.innerHTML = '▶️ Tocar para Ver/Escuchar';
+                        btnDesc.style.cssText = 'position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10; padding:15px; background:#e74c3c; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;';
+                        btnDesc.onclick = () => { video.play(); btnDesc.remove(); };
+                        div.appendChild(btnDesc);
+                    });
+                };
             };
 
             if (esLlamador) {
@@ -400,29 +606,40 @@
         }
 
         function enviarSignal(toPeerId, data) {
-            data.from = myPeerId;
-            data.nombre = currentUser;
+            data.from = myPeerId; data.nombre = currentUser;
             signalingRef.child(toPeerId).push(data);
         }
 
-        function crearVentanaVideo(id, nombre, stream) {
-            if (document.getElementById(`cam-${id}-container`)) return; 
-            
-            const div = document.createElement('div');
-            div.className = 'draggable-video';
-            div.id = `cam-${id}-container`;
-            div.style.top = Math.random() * 200 + 'px';
-            div.style.left = Math.random() * 200 + 'px';
-            
-            div.innerHTML = `
-                <div class="drag-header" id="${div.id}header">${nombre}</div>
-                <video autoplay playsinline srcObject></video>
-            `;
-            document.getElementById('workspace').appendChild(div);
-            div.querySelector('video').srcObject = stream;
-            
-            hacerArrastrable(div);
-        }
+        db.ref(`salas/${roomID}/screenShare`).on('value', snap => {
+            const sharerId = snap.val();
+            const presentationContainer = document.getElementById('presentation-container');
+            const presentationVideo = document.getElementById('presentation-video');
+            const titleSpan = document.querySelector('#presentation-containerheader .drag-title');
+
+            if (sharerId) {
+                if (sharerId !== myPeerId) {
+                    setTimeout(() => {
+                        const sharerVideoEl = document.querySelector(`#cam-${sharerId}-container video`);
+                        if (sharerVideoEl) {
+                            presentationVideo.srcObject = sharerVideoEl.srcObject;
+                            titleSpan.innerText = `Pantalla de ${peers[sharerId]?.nombre || 'Invitado'}`;
+                            
+                            posicionarPantallaCompartida();
+                            presentationContainer.style.display = 'flex';
+                            
+                            acomodarCamarasALaIzquierda();
+                            document.getElementById(`cam-${sharerId}-container`).style.display = 'none'; 
+                        }
+                    }, 1000);
+                }
+            } else {
+                if (!isSharingScreen) {
+                    presentationContainer.style.display = 'none';
+                    presentationVideo.srcObject = null;
+                }
+                document.querySelectorAll('.draggable-video').forEach(el => el.style.display = 'flex');
+            }
+        });
 
         function toggleAudio() { 
             const track = localStream.getAudioTracks()[0]; track.enabled = !track.enabled;
@@ -430,11 +647,11 @@
         }
         function toggleVideo() { 
             const track = localStream.getVideoTracks()[0]; track.enabled = !track.enabled;
-            document.getElementById('btn-video').innerText = track.enabled ? "Apagar Camara" : "Encender Camara";
+            document.getElementById('btn-video').innerText = track.enabled ? "Apagar Cámara" : "Encender Cámara";
         }
         function togglePanelLateral() {
             const panel = document.getElementById('right-sidebar');
-            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
         }
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -443,32 +660,79 @@
             document.getElementById(`btn-tab-${tab}`).classList.add('active');
         }
 
-        function compartirPantalla() {
-            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(screenStream => {
-                const screenTrack = screenStream.getVideoTracks()[0];
-                document.getElementById('localVideo').srcObject = screenStream;
-                
-                Object.values(peers).forEach(peerObj => {
-                    const sender = peerObj.pc.getSenders().find(s => s.track.kind === 'video');
-                    sender.replaceTrack(screenTrack);
-                });
+        let isSharingScreen = false;
 
-                screenTrack.onended = () => {
-                    const camTrack = localStream.getVideoTracks()[0];
-                    document.getElementById('localVideo').srcObject = localStream;
+        async function compartirPantalla() {
+            if(window.innerWidth <= 768) { alert("Compartir pantalla no disponible en móviles."); return; }
+            const btn = document.getElementById('btn-share');
+
+            if (!isSharingScreen) {
+                try {
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                    const screenTrack = screenStream.getVideoTracks()[0];
+                    
+                    document.getElementById('presentation-video').srcObject = screenStream;
+                    document.querySelector('#presentation-containerheader .drag-title').innerText = `Tú compartiendo pantalla`;
+                    
+                    posicionarPantallaCompartida();
+                    document.getElementById('presentation-container').style.display = 'flex';
+                    acomodarCamarasALaIzquierda();
+                    
                     Object.values(peers).forEach(peerObj => {
                         const sender = peerObj.pc.getSenders().find(s => s.track.kind === 'video');
-                        sender.replaceTrack(camTrack);
+                        if(sender) sender.replaceTrack(screenTrack);
                     });
-                };
-            }).catch(e => console.log("Pantalla cancelada"));
+
+                    db.ref(`salas/${roomID}/screenShare`).set(myPeerId);
+
+                    isSharingScreen = true;
+                    btn.innerText = "🛑 Dejar de Compartir";
+                    btn.classList.add('danger');
+
+                    screenTrack.onended = detenerPantalla;
+                } catch (e) { console.log("Cancelado."); }
+            } else {
+                detenerPantalla();
+            }
+        }
+
+        function detenerPantalla() {
+            const btn = document.getElementById('btn-share');
+            const presentVideo = document.getElementById('presentation-video');
+            if (presentVideo.srcObject) {
+                presentVideo.srcObject.getTracks().forEach(t => t.stop());
+                presentVideo.srcObject = null;
+            }
+            document.getElementById('presentation-container').style.display = 'none';
+
+            const camTrack = localStream.getVideoTracks()[0];
+            Object.values(peers).forEach(peerObj => {
+                const sender = peerObj.pc.getSenders().find(s => s.track.kind === 'video');
+                if(sender) sender.replaceTrack(camTrack);
+            });
+
+            db.ref(`salas/${roomID}/screenShare`).remove();
+
+            isSharingScreen = false;
+            btn.innerText = "Compartir Pantalla";
+            btn.classList.remove('danger');
         }
 
         hacerArrastrable(document.getElementById("cam-local-container"));
+        hacerArrastrable(document.getElementById("presentation-container"));
+
         function hacerArrastrable(el) {
             let p1 = 0, p2 = 0, p3 = 0, p4 = 0;
             const header = document.getElementById(el.id + "header");
+            if(!header) return;
             header.onmousedown = function(e) {
+                if(window.innerWidth <= 768) return; 
+                // Evitar el arrastre si tocas un botón
+                if(e.target.tagName.toLowerCase() === 'button' || e.target.closest('.video-actions')) return;
+                
+                document.querySelectorAll('.draggable-video, #presentation-container').forEach(v => v.style.zIndex = '10');
+                el.style.zIndex = '100';
+
                 e.preventDefault(); p3 = e.clientX; p4 = e.clientY;
                 document.onmouseup = function() { document.onmouseup = null; document.onmousemove = null; };
                 document.onmousemove = function(e) {
